@@ -177,7 +177,7 @@ var RefreshPowerGraph = function (circuitId, start, end, groupBy, callback) {
     else
         offset = ('0' + (-offset / 60)).slice(-2) + ':' + ('0' + (-offset % 60)).slice(-2);
 
-
+console.debug(9,'/power?circuitId=' + circuitId + '&start=' + start.getTime() + '&end=' + end.getTime() + '&groupBy=' + groupBy + '&offset=' + offset)
     $.ajax({
         url: '/power?circuitId=' + circuitId + '&start=' + start.getTime() + '&end=' + end.getTime() + '&groupBy=' + groupBy + '&offset=' + offset,
         type: 'get',

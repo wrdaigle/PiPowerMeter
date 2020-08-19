@@ -1,0 +1,64 @@
+{
+  "Configuration": {
+    "Price": "0.1",
+    "Region": "en-US",
+    "VoltageScale": "354",
+    "SampleTime": "1",
+    "DeviceName": "",
+    "Port": "3000",
+    "HardwareVersion": "0001",
+    "DriverVersion": "CS5490 v1.0"
+  },
+  "Probes": [{
+      "Name": "SCT-006",
+      "Factor": "40"
+    }, {
+      "Name": "SCT-010",
+      "Factor": "150"
+    }, {
+      "Name": "SCT-013",
+      "Factor": "100"
+    }, {
+      "Name": "SCT-016",
+      "Factor": "150"
+    }, {
+      "Name": "SCT-019",
+      "Factor": "300"
+    }
+  ],
+  "Circuits": [{
+      "id": 1,
+      "Name": "Circuit 0 - Board 0",
+      "Description": "Circuit 0 - Board 0",
+      "Enabled": 1,
+      "IsMain": 0,
+      "Probes": [{
+          "id": 1,
+          "Type": "SCT-013",
+          "Board": 0,
+          "CurrentChannel": 1,
+          "VoltageChannel": 0,
+          "Breaker": 30,
+          "Alert": "",
+          "SourceType": 0
+        }
+      ],
+      "Samples": null
+    }
+  ],
+  "DatabaseRows": "3,692",
+  "SoftwareVersion": {
+    "Installed": {
+      "Sha": "3e166bfc2fdc86e2549ab0cd9e0484bc2f517351",
+      "Timestamp": "2020-04-23T19:38:06.000Z"
+    },
+    "Latest": {
+      "Sha": "3e166bfc2fdc86e2549ab0cd9e0484bc2f517351",
+      "Timestamp": "2020-04-23T19:38:06.000Z"
+    },
+    "UpdateRequired": false
+  },
+  "Uptime": "21 minutes",
+  "DatabaseSize": "446,464",
+  "Frequency": "60.12 Hz"
+}
