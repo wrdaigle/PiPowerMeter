@@ -7,8 +7,11 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ResponsiveContainer,
 } from "recharts";
-import moment from 'moment'
+import moment from "moment";
+import { Grommet, Box } from "grommet";
+
 import "./App.css";
 
 Date.prototype.addHours = function (h) {
@@ -18,7 +21,7 @@ Date.prototype.addHours = function (h) {
 const endTime = new Date();
 const startTime = new Date();
 startTime.addHours(-12);
-console.debug(startTime.getTime().toString(),endTime.getTime().toString())
+console.debug(startTime.getTime().toString(), endTime.getTime().toString());
 
 function App() {
   const [data, set_data] = useState(null);
@@ -30,6 +33,7 @@ function App() {
       })
       .then((configJson) => {
         const circuits = configJson.Circuits;
+        console.debug(circuits)
         const allPromises = circuits.map((circuit) => {
           return fetch(
             "/power?circuitId=" +
@@ -46,7 +50,6 @@ function App() {
             return result.json();
           });
           Promise.all(allPromises2).then((results2) => {
-            console.debug(results2);
             const out = results2[0].ts.map((item) => {
               let t = {};
               circuits.forEach((c) => {
@@ -59,7 +62,6 @@ function App() {
                 rec[circuit.Name] = results2[circuit_i].P[rec_i];
               });
             });
-            console.debug(out);
             set_data({ circuits: circuits, data: out });
           });
         });
@@ -67,43 +69,48 @@ function App() {
   }, []);
 
   if (!data) return null;
+  console.debug(data.data)
   return (
-    <LineChart
-      width={1200}
-      height={1000}
-      data={data.data}
-      margin={{
-        top: 5,
-        right: 30,
-        left: 20,
-        bottom: 5,
-      }}
-    >
-      <CartesianGrid strokeDasharray="3 3" />
-      <XAxis
-        dataKey="time"
-        scale="time"
-        type="number"
-        domain={["auto", "auto"]}
-        tickFormatter={timeStr => moment(timeStr).format('HH:mm')}
-      />
-      <YAxis />
+    <Grommet full>
+      <Box fill>
+        <ResponsiveContainer>
+          <LineChart
+            data={data.data}
+            margin={{
+              top: 5,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="time"
+              scale="time"
+              type="number"
+              domain={["auto", "auto"]}
+              tickFormatter={(timeStr) => moment(timeStr).format("HH:mm")}
+            />
+            <YAxis />
 
-      <Legend />
-      {data.circuits.map((circuit) => {
-        return (
-          <Line
-            type="monotone"
-            dataKey={circuit.Name}
-            stroke={"#" + Math.floor(Math.random() * 16777215).toString(16)}
-            dot={false}
-            onClick={(e) => console.debug(e,circuit.Name)}
-          />
-        );
-      })}
-      {/* <Line type="monotone" dataKey="pv" stroke="#8884d8" activeDot={{ r: 8 }} />
-      <Line type="monotone" dataKey="uv" stroke="#82ca9d" /> */}
-    </LineChart>
+            <Legend />
+            {data.circuits.map((circuit) => {
+              return (
+                <Line
+                  type="monotone"
+                  dataKey={circuit.Name}
+                  stroke={
+                    "#" + Math.floor(Math.random() * 16777215).toString(16)
+                  }
+                  dot={false}
+                  onClick={(e) => console.debug(e, circuit.Name)}
+                />
+              );
+            })}
+          </LineChart>
+        </ResponsiveContainer>
+      </Box>
+    </Grommet>
   );
 }
 
