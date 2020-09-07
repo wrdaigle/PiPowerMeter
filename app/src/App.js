@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import moment from "moment";
-import { Grommet, Box } from "grommet";
+import { Grommet, Box, Grid, TextInput } from "grommet";
 
 import "./App.css";
 
@@ -18,30 +18,30 @@ Date.prototype.addHours = function (h) {
   this.setTime(this.getTime() + h * 60 * 60 * 1000);
   return this;
 };
-const endTime = new Date();
-const startTime = new Date();
-startTime.addHours(-12);
-console.debug(startTime.getTime().toString(), endTime.getTime().toString());
+const endTimeUTC = moment();
+const startTimeUTC = moment().subtract(12, "hours");
+
 
 function App() {
   const [data, set_data] = useState(null);
+  const [minTickGap, set_minTickGap] = useState(1000);
 
   useEffect(() => {
+    if (data) return;
     fetch("/config")
       .then((response) => {
         return response.json();
       })
       .then((configJson) => {
         const circuits = configJson.Circuits;
-        console.debug(circuits)
         const allPromises = circuits.map((circuit) => {
           return fetch(
             "/power?circuitId=" +
               circuit.id.toString() +
               "&start=" +
-              startTime.getTime().toString() +
+              startTimeUTC.format("x") +
               "&end=" +
-              endTime.getTime().toString() +
+              endTimeUTC.format("x") +
               "&groupBy=None&offset=-06:00"
           );
         });
@@ -53,7 +53,7 @@ function App() {
             const out = results2[0].ts.map((item) => {
               let t = {};
               circuits.forEach((c) => {
-                t.time = item;
+                t.time = item * 1000;
               });
               return t;
             });
@@ -69,7 +69,10 @@ function App() {
   }, []);
 
   if (!data) return null;
-  console.debug(data.data)
+
+  const startTime = moment(data.data[0].time);
+  const endTime = moment(data.data[data.data.length - 1].time);
+
   return (
     <Grommet full>
       <Box fill>
@@ -88,8 +91,11 @@ function App() {
               dataKey="time"
               scale="time"
               type="number"
-              domain={["auto", "auto"]}
-              tickFormatter={(timeStr) => moment(timeStr).format("HH:mm")}
+              domain={[startTime.valueOf(), endTime.valueOf()]}
+              tickFormatter={(time) => moment(time).format("HH:mm")}
+              ticks={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((tick) =>
+                startTime.clone().startOf("hour").add(tick, "hours").valueOf()
+              )}
             />
             <YAxis />
 
