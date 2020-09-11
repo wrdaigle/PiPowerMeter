@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
+  Area,
+  AreaChart,
   LineChart,
   Line,
   XAxis,
@@ -10,7 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import moment from "moment";
-import { Grommet, Box, Grid, TextInput } from "grommet";
+import { Grommet, Box, Grid, Select } from "grommet";
 
 import "./App.css";
 
@@ -21,10 +23,11 @@ Date.prototype.addHours = function (h) {
 const endTimeUTC = moment();
 const startTimeUTC = moment().subtract(12, "hours");
 
+const minPower = 5;
 
 function App() {
   const [data, set_data] = useState(null);
-  const [minTickGap, set_minTickGap] = useState(1000);
+  const [selectedCircuit, set_selectedCircuit] = useState(null);
 
   useEffect(() => {
     if (data) return;
@@ -33,7 +36,10 @@ function App() {
         return response.json();
       })
       .then((configJson) => {
-        const circuits = configJson.Circuits;
+        let circuits = configJson.Circuits;
+        circuits.forEach((c) => {
+          c.color = "#" + Math.floor(Math.random() * 16777215).toString(16);
+        });
         const allPromises = circuits.map((circuit) => {
           return fetch(
             "/power?circuitId=" +
@@ -50,6 +56,13 @@ function App() {
             return result.json();
           });
           Promise.all(allPromises2).then((results2) => {
+            //assume everything is a load -- this helps account for the fact that some of my hall sensors are backwards
+            results2.forEach((c) => {
+                c.P = c.P.map(rec=>Math.abs(rec))
+            });
+            results2.forEach((c, i) => {
+                circuits[i].maxPower = Math.max(...c.P);
+            });
             const out = results2[0].ts.map((item) => {
               let t = {};
               circuits.forEach((c) => {
@@ -72,84 +85,110 @@ function App() {
 
   const startTime = moment(data.data[0].time);
   const endTime = moment(data.data[data.data.length - 1].time);
-
+  const ticks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((tick) =>
+    startTime.clone().startOf("hour").add(tick, "hours").valueOf()
+  );
+  
   return (
     <Grommet full>
-      <Box fill>
-        <ResponsiveContainer>
-          <LineChart
-            data={data.data}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="time"
-              scale="time"
-              type="number"
-              domain={[startTime.valueOf(), endTime.valueOf()]}
-              tickFormatter={(time) => moment(time).format("HH:mm")}
-              ticks={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((tick) =>
-                startTime.clone().startOf("hour").add(tick, "hours").valueOf()
-              )}
-            />
-            <YAxis />
+      <Grid fill rows={["1/2", "1//2"]}>
+        <Box fill>
+          <ResponsiveContainer>
+            <AreaChart
+              data={data.data}
+              margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 5,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="time"
+                scale="time"
+                type="number"
+                domain={[startTime.valueOf(), endTime.valueOf()]}
+                tickFormatter={(time) => moment(time).format("ha")}
+                ticks={ticks}
+              />
+              <YAxis />
+              {data.circuits
+                .filter((c) => c.IsMain === 1)
+                .map((circuit) => {
+                  return (
+                    <Area type="monotone" dataKey={circuit.Name} dot={false} />
+                  );
+                })}
+            </AreaChart>
+          </ResponsiveContainer>
+        </Box>
+        <Box fill>
+          <ResponsiveContainer>
+            <LineChart
+              data={data.data}
+              margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 5,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="time"
+                scale="time"
+                type="number"
+                domain={[startTime.valueOf(), endTime.valueOf()]}
+                tickFormatter={(time) => moment(time).format("ha")}
+                ticks={ticks}
+              />
+              <YAxis
+                type="number"
+                domain={[
+                  'dataMin',
+                  selectedCircuit
+                    ? data.circuits.find(
+                        (circuit) => circuit.Name === selectedCircuit
+                      ).maxPower
+                    : "dataMax",
+                ]}
+                allowDataOverflow
+              />
 
-            <Legend />
-            {data.circuits.map((circuit) => {
-              return (
-                <Line
-                  type="monotone"
-                  dataKey={circuit.Name}
-                  stroke={
-                    "#" + Math.floor(Math.random() * 16777215).toString(16)
+              <Legend
+                onClick={(item) => {
+                  console.debug(item);
+                  set_selectedCircuit(item.value);
+                }}
+                formatter={(value)=> {
+                    console.debug(value)
+                  if (value===selectedCircuit){
+                      return <b>{value}</b>
                   }
-                  dot={false}
-                  onClick={(e) => console.debug(e, circuit.Name)}
-                />
-              );
-            })}
-          </LineChart>
-        </ResponsiveContainer>
-      </Box>
+                  return value;
+                }}
+              />
+              {data.circuits
+                .filter((c) => c.maxPower > minPower && c.IsMain === 0)
+                .map((circuit) => {
+                  return (
+                    <Line
+                      type="monotone"
+                      dataKey={circuit.Name}
+                      stroke={!selectedCircuit || circuit.Name === selectedCircuit ? circuit.color : 'lightgrey'}
+                      strokeWidth={circuit.Name === selectedCircuit ? 3 : 1}
+                      dot={false}
+                      onClick={(e) => console.debug(e, circuit.Name)}
+                    />
+                  );
+                })}
+            </LineChart>
+          </ResponsiveContainer>
+        </Box>
+      </Grid>
     </Grommet>
   );
 }
-
-// function getData(flavor, params) {
-//     let url = getLambdaEndpoint() + "?flavor=" + flavor;
-//     return new Promise(function(resolve, reject) {
-//         fetch(url, {
-//             method: "post",
-//             body: JSON.stringify(params)
-//         })
-//             .then(response => response.json())
-//             .then(data => {
-//                 if (data.message || data.message == "Internal server error") {
-//                     try {
-//                         throw new Error("Error running lambda("+flavor+").");
-//                     } catch (e) {
-//                         console.error(e.name + ": " + e.message);
-//                         reject(Error(e.name + ": " + e.message));
-//                     }
-//                 }
-//                 else {
-//                     resolve(data.data);
-//                 }
-//             })
-//             .catch(error => {
-//                 try {
-//                     throw new Error("Error running lambda("+flavor+").");
-//                 } catch (e) {
-//                     console.error(e.name + ": " + e.message);
-//                     reject(Error(e.name + ": " + e.message));
-//                 }
-//             });;
-//     });
-// }
 
 export default App;
