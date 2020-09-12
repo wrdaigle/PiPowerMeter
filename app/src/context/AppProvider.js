@@ -2,6 +2,7 @@ import React, { useReducer, useEffect } from "react";
 import AppContext from "./appContext";
 import { appReducer, actions } from "./appReducer";
 import moment from "moment";
+import randomColor from 'randomcolor';
 
 const initialState = {
     powerData: null,
@@ -13,6 +14,8 @@ const initialState = {
         tickSpacingUnits: "hours",
     },
 };
+
+const serverRoot = window.location.hostname === 'localhost'?'http://192.168.4.32:3000':'';
 
 const AppProvider = (props) => {
     const [state, dispatch] = useReducer(appReducer, initialState);
@@ -27,19 +30,18 @@ const AppProvider = (props) => {
     );
 
     const setPowerData = () => {
-        fetch("/config")
+        fetch(serverRoot+"/config")
             .then((response) => {
                 return response.json();
             })
             .then((configJson) => {
                 let circuits = configJson.Circuits;
                 circuits.forEach((c) => {
-                    c.color =
-                        "#" + Math.floor(Math.random() * 16777215).toString(16);
+                    c.color = randomColor();
                 });
                 const allPromises = circuits.map((circuit) => {
                     return fetch(
-                        "/power?circuitId=" +
+                        serverRoot+"/power?circuitId=" +
                             circuit.id.toString() +
                             "&start=" +
                             startTimeUTC.format("x") +
@@ -83,7 +85,6 @@ const AppProvider = (props) => {
     };
 
     const setChartSettings = (spanTitle) => {
-        console.debug(spanTitle)
         switch (spanTitle) {
             case "1 hour":
                 dispatch({

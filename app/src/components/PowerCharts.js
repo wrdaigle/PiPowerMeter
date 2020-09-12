@@ -1,5 +1,7 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useCallback, useContext, useEffect } from "react";
 import appContext from "../context/appContext";
+import debounce from "lodash/debounce";
+
 import {
     Area,
     AreaChart,
@@ -13,27 +15,52 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import moment from "moment";
-import { Box, Grid, Select } from "grommet";
+import { Box, Grid, RangeSelector } from "grommet";
 
 const minPower = 5;
 
 function PowerCharts() {
-    // const [data, set_data] = useState(null);
-    const { powerData, chartSettings, setChartSettings } = useContext(appContext);
+    const { powerData } = useContext(appContext);
     const [selectedCircuit, set_selectedCircuit] = useState(null);
+    const [chartRange, set_chartRange] = useState(null);
+    const [zoomRange, set_zoomRange] = useState(null);
+    const [sliderRange, set_sliderRange] = useState(null);
+    const [ticks, set_ticks] = useState([]);
 
-    if (!powerData) return null;
+    useEffect(() => {
+        if (!powerData) return;
+        const startTime = moment(powerData.data[0].time);
+        const endTime = moment(powerData.data[powerData.data.length - 1].time);
+        set_chartRange([startTime, endTime]);
+        set_zoomRange([startTime.valueOf(), endTime.valueOf()]);
+        set_sliderRange([startTime.valueOf(), endTime.valueOf()]);
+    }, [powerData]);
 
-    const startTime = moment(powerData.data[0].time);
-    const endTime = moment(powerData.data[powerData.data.length - 1].time);
-    const ticks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((tick) =>
-        startTime.clone().startOf("hour").add(tick, "hours").valueOf()
+    useEffect(() => {
+        if (!powerData) return;
+        let ticks = [chartRange[0].clone().endOf("hour")];
+        while (true) {
+            const previousTick = ticks[ticks.length - 1];
+            const nextTick = previousTick.clone().add(1, "hours");
+            if (nextTick.diff(chartRange[1]) < 0) {
+                ticks.push(nextTick);
+            } else {
+                break;
+            }
+        }
+        set_ticks(ticks.map((tick) => tick.valueOf()));
+    }, [zoomRange]);
+
+    const debouncedSetZoomRange = useCallback(
+        debounce((nextValue) => set_zoomRange(nextValue), 100),
+        [] // will be created only once initially
     );
 
+    if (!powerData || !zoomRange) return null;
+
     return (
-        <Grid fill rows={["auto", "flex"]}>
-            <Select options={['1 hour', '12 hours', '24 hours','1 week']} value={chartSettings.spanTitle} onChange={({value})=>setChartSettings(value)} />
-            <Grid fill rows={["1/2", "1//2"]}>
+        <Grid fill rows={["5fr", "1fr"]}>
+            <Grid fill rows={["2fr", "3fr"]}>
                 <Box fill>
                     <ResponsiveContainer>
                         <AreaChart
@@ -50,14 +77,12 @@ function PowerCharts() {
                                 dataKey="time"
                                 scale="time"
                                 type="number"
-                                domain={[
-                                    startTime.valueOf(),
-                                    endTime.valueOf(),
-                                ]}
+                                domain={zoomRange}
                                 tickFormatter={(time) =>
                                     moment(time).format("ha")
                                 }
                                 ticks={ticks}
+                                allowDataOverflow
                             />
                             <YAxis />
                             {powerData.circuits
@@ -90,14 +115,12 @@ function PowerCharts() {
                                 dataKey="time"
                                 scale="time"
                                 type="number"
-                                domain={[
-                                    startTime.valueOf(),
-                                    endTime.valueOf(),
-                                ]}
+                                domain={zoomRange}
                                 tickFormatter={(time) =>
                                     moment(time).format("ha")
                                 }
                                 ticks={ticks}
+                                allowDataOverflow
                             />
                             <YAxis
                                 type="number"
@@ -120,7 +143,6 @@ function PowerCharts() {
                                     set_selectedCircuit(item.value);
                                 }}
                                 formatter={(value) => {
-                                    console.debug(value);
                                     if (value === selectedCircuit) {
                                         return <b>{value}</b>;
                                     }
@@ -159,6 +181,22 @@ function PowerCharts() {
                     </ResponsiveContainer>
                 </Box>
             </Grid>
+            <Box margin="10px">
+                <RangeSelector
+                    direction="horizontal"
+                    invert={false}
+                    min={chartRange[0].valueOf()}
+                    max={chartRange[1].valueOf()}
+                    size="full"
+                    round="small"
+                    values={sliderRange}
+                    onChange={(values) => {
+                        debouncedSetZoomRange(values);
+                        set_sliderRange(values);
+                    }}
+                    height="50px"
+                />
+            </Box>
         </Grid>
     );
 }

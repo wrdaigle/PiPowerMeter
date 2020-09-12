@@ -11,7 +11,6 @@ const appReducer = (state, action) => {
                 powerData: action.to
             };
         case actions.SET_CHART_SETTINGS:
-            console.debug(action)
             return {
                 ...state,
                 chartSettings: action.to

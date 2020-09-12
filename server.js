@@ -1,5 +1,6 @@
 ﻿var http = require('http');
 var express = require('express');
+var cors = require('cors');
 var bodyParser = require('body-parser');
 var favicon = require('serve-favicon');
 var methodOverride = require('method-override');
@@ -22,6 +23,7 @@ try {
 var username = "", password = "", compactRunning = false;
 
 var app = express(), server = null, httpPort = 3000;
+app.use(cors());
 
 // Add timestamp to console messages
 (function (o) {
